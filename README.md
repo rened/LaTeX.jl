@@ -35,14 +35,15 @@ openpdf(report(Section("Plots",Figure("Plot comparison",Tabular({w,g})))))
 
 * `latex = report(content)` assembles the Latex file
 * `openpdf(latex)` compiles the Latex file and tries to open it
-* Section(title, content) creates a new section. A section is automatically translated to a Linux chapter, section or subsection according to its nesting
-* Figure(caption, content)
-* Table(caption content)
-* Tabular(content)
-* Image(height, width, Array or Winston.FramePlot or Gadfly.Plot), where the array can be either of size (m,n,1) or RGB (m,n,3), with the values in the range 0 to 1
+* `Section(title, content)` creates a new section. A section is automatically translated to a Linux chapter, section or subsection according to its nesting
+* `Figure(caption, content)`
+* `Table(caption content)`
+* `Tabular(content)`
+* `Image(height, width, Array or Winston.FramePlot or Gadfly.Plot)`, where the array can be either of size `(m,n,1)` or RGB `(m,n,3)`, with the values in the range `0..1`
 
 ## Todos
 
 * make preable configurable
 * adapt `openpdf` to linux
+* add tests
 
