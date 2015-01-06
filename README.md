@@ -1,15 +1,15 @@
-# Latex
+# LaTeX
 
-[![Build Status](https://travis-ci.org/rened/Latex.jl.svg?branch=master)](https://travis-ci.org/rened/Latex.jl)
+[![Build Status](https://travis-ci.org/rened/LaTeX.jl.svg?branch=master)](https://travis-ci.org/rened/LaTeX.jl)
 
-This package allows to construct Latex documents programmatically.
+This package allows to construct LaTeX documents programmatically.
 
 ## Installation
 
-It is assumed that you have `pdflatex` installed. You can then install `Latex.jl` like this:
+It is assumed that you have `pdflatex` installed. You can then install `LaTeX.jl` like this:
 
 ```jl
-Pkg.add("Latex")
+Pkg.add("LaTeX")
 ```
 
 ## Example
@@ -33,8 +33,8 @@ openpdf(report(Section("Plots",Figure("Plot comparison",Tabular({w,g})))))
 
 `content` can always be either a single item or an array of items.
 
-* `latex = report(content)` assembles the Latex file
-* `openpdf(latex)` compiles the Latex file and tries to open it
+* `latex = report(content)` assembles the LaTeX file
+* `openpdf(latex)` compiles the LaTeX file and tries to open it
 * `Section(title, content)` creates a new section. A section is automatically translated to a Linux chapter, section or subsection according to its nesting
 * `Figure(caption, content)`
 * `Table(caption content)`

@@ -1,4 +1,4 @@
-The Latex.jl package is licensed under the MIT "Expat" License:
+The LaTeX.jl package is licensed under the MIT "Expat" License:
 
 > Copyright (c) 2015: Rene Donner.
 >

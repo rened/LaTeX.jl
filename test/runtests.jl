@@ -1,4 +1,4 @@
-using Latex
+using LaTeX
 using Base.Test
 
 # write your own tests here

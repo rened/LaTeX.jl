@@ -1,4 +1,4 @@
-module Latex
+module LaTeX
 
 using SHA
 export Section, Table, Tabular, Figure, Image, ImageFileData, report, openpdf
