@@ -2,6 +2,9 @@ module LaTeX
 
 using SHA
 import Images
+
+@windows_only include("wincall.jl")
+
 export Section, Table, Tabular, Figure, Image, ImageFileData, report, openpdf
 
 type Section
@@ -77,12 +80,18 @@ println(dirname)
 mkdir(dirname)
 texname = "$dirname\\document.tex"
 pdfname = "$dirname\\document.pdf"
-    open(texname, "w") do file
-        write(file, latex)
-    end
-    readall(`pdflatex -halt-on-error -output-directory $dirname $texname`)
-    readall(`pdflatex -halt-on-error -output-directory $dirname $texname`)
-spawn(`open $pdfname`)
+open(texname, "w") do file
+	write(file, latex)
+end
+readall(`pdflatex -halt-on-error -output-directory $dirname $texname`)
+readall(`pdflatex -halt-on-error -output-directory $dirname $texname`)
+
+if OS_NAME == :Windows
+	command = "cmd /K start \"\" $pdfname"
+	CreateProcess(command)
+else
+	spawn(`open $pdfname`)
+end
 nothing
 end
 processitem{T<:String}(p, item::T, indent) = {item}
