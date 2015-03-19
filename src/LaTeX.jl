@@ -72,10 +72,11 @@ if isinstalled("Gadfly")
 end
 
 function openpdf(latex)
-dirname = tempname();
+dirname = "$(tempname()).d";
+println(dirname)
 mkdir(dirname)
-    texname = "$dirname/document.tex"
-pdfname = "$dirname/document.pdf"
+texname = "$dirname\\document.tex"
+pdfname = "$dirname\\document.pdf"
     open(texname, "w") do file
         write(file, latex)
     end
