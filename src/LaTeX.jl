@@ -133,7 +133,8 @@ function processitem(p, item::Image, indent)
             push!(r, "height=$(item.height)cm")
         end
     end
-    push!(r, "]{$filename}")
+	escaped_filename = replace(filename,"\\","/")
+    push!(r, "]{$escaped_filename}")
     flatten(r)
 end
  
