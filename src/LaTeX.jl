@@ -1,6 +1,7 @@
 module LaTeX
 
 using SHA
+import Images
 export Section, Table, Tabular, Figure, Image, ImageFileData, report, openpdf
 
 type Section
@@ -33,7 +34,13 @@ type Image
     data::ImageFileData
 end
 
-function Image(height, width, data::Array)
+Image(height, width, data::Array) = Image(height, width, size(data,3) == 3 ? Images.colorim(data) : Images.grayim(data'))
+function Image(height, width, image::Images.Image)
+    filename = tempname()*".png"
+    Images.imwrite(image, filename)
+    r = readall(filename)
+    rm(filename)
+    Image(height, width, ImageFileData(r, :png))
 end
 
 
