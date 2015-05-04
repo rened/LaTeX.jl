@@ -15,6 +15,8 @@ Pkg.add("LaTeX")
 ## Example
 
 ```jl
+using LaTeX
+
 x = linspace(-6,6,100)
 y = sin(x)./x
 
