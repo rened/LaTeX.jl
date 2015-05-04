@@ -5,7 +5,7 @@ import Images
 
 @windows_only include("wincall.jl")
 
-export Section, Table, Tabular, Figure, Image, ImageFileData, report, openpdf
+export Section, Table, Tabular, Figure, Image, ImageFileData, Code, report, openpdf
 
 type Section
     title
@@ -35,6 +35,10 @@ type Image
     height
     width
     data::ImageFileData
+end
+
+type Code
+    code
 end
 
 Image(height, width, data::Array) = Image(height, width, size(data,3) == 3 ? Images.colorim(data) : Images.grayim(data'))
@@ -75,26 +79,29 @@ if isinstalled("Gadfly")
 end
 
 function openpdf(latex)
-dirname = "$(tempname()).d";
-mkdir(dirname)
-texname = joinpath(dirname, "document.tex")
-pdfname = joinpath(dirname,"document.pdf")
-open(texname, "w") do file
-	write(file, latex)
-end
-readall(`pdflatex -halt-on-error -output-directory $dirname $texname`)
-readall(`pdflatex -halt-on-error -output-directory $dirname $texname`)
+    dirname = "$(tempname()).d"
+    @show dirname
+    mkdir(dirname)
+    texname = joinpath(dirname, "document.tex")
+    pdfname = joinpath(dirname,"document.pdf")
+    open(texname, "w") do file
+        write(file, latex)
+    end
+    cd(dirname) do 
+        for i in 1:2
+            output = readall(`pdflatex -shell-escape -halt-on-error $texname`)
+            contains("Error:", output) && println(output)
+        end
+    end
 
-if OS_NAME == :Windows
-	command = "cmd /K start \"\" $pdfname"
-	CreateProcess(command)
-else
-	spawn(`open $pdfname`)
+    if OS_NAME == :Windows
+        command = "cmd /K start \"\" $pdfname"
+        CreateProcess(command)
+    else
+        spawn(`open $pdfname`)
+    end
+    nothing
 end
-nothing
-end
-processitem{T<:String}(p, item::T, indent) = {item}
-processitem{T<:Number}(p, item::T, indent) = {"$item"}
 
 flatten(a) = flatten({},a)
 function flatten(r, a)
@@ -103,6 +110,9 @@ function flatten(r, a)
     end
     r
 end
+
+processitem{T<:String}(p, item::T, indent) = {item}
+processitem{T<:Number}(p, item::T, indent) = {"$item"}
 
 function processitem(p, items::Array, indent)
     isempty(items) && return {""}
@@ -117,7 +127,7 @@ function processitem(p, item::Section, indent)
         cmd = commands[indent]
     end
 
-    r = {"\\$cmd{$(item.title)}\\nopagebreak"};
+    r = {"\\$cmd{$(item.title)}\\nopagebreak"}
     append!(r, processitem(p, item.content, indent+1))
 end
 
@@ -125,6 +135,10 @@ function processitem(p, item::Figure, indent)
     r = {"\\begin{figure}[!ht]"}
     append!(r, processitem(p, item.content, indent))
     append!(r, {"\\caption{$(item.caption)}", "\\end{figure}"})
+end
+
+function processitem(p, item::Code, indent)
+    {"\\begin{pygmented}{jl}", split(item.code,'\n')..., "\\end{pygmented}"}
 end
 
 function processitem(p, item::Image, indent)
@@ -193,11 +207,13 @@ function report(p, items; author = "", title = "Report", date = "", toc = false,
     "\\usepackage{sectsty}", 
     "\\usepackage{morefloats}", 
     "\\usepackage[section]{placeins}", 
+    "\\usepackage{texments}",
     "\\allsectionsfont{\\normalfont\\sffamily\\bfseries}", 
     isempty(date) ? "" : "\\date{$date}", 
     isempty(author) ? "": "\\author{$author}", 
     "\\title{$title}", 
     "\\begin{document}", 
+    "\\usestyle{default}",
     "\\maketitle", 
     isempty(theabstract) ? "": "\\begin{abstract}$theabstract\\end{abstract}", 
     toc ? "\\tableofcontents" : ""}
@@ -212,11 +228,11 @@ end
 
 #openpdf(report(Dict(),{}))
 #openpdf(report(Dict(),{"Test"}))
-#openpdf(report(Section("Section header", "content"), toc = false));
+#openpdf(report(Section("Section header", "content"), toc = false))
 
-#sec1 = Section("sec1", "content1");
-#sec2 = Section("sec", "content1");
-#ch1 = Section("ch1", {sec1, sec2});
+#sec1 = Section("sec1", "content1")
+#sec2 = Section("sec", "content1")
+#ch1 = Section("ch1", {sec1, sec2})
 
 #openpdf(report(ch1, toc=true))
 

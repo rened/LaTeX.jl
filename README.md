@@ -12,7 +12,10 @@ It is assumed that you have `pdflatex` installed. You can then install `LaTeX.jl
 Pkg.add("LaTeX")
 ```
 
+To be able to use code blocks with syntax highlighting, please install [Pygments](http://pygments.org/): `easy_install -U Pygments`.
+
 ## Example
+
 
 ```jl
 using LaTeX
@@ -26,7 +29,18 @@ w = Image([], 7, Winston.plot(x, y))
 import Gadfly
 g = Image(7, 7, Gadfly.plot(x = x, y = y))
 
-openpdf(report(Section("Plots",Figure("Plot comparison",Tabular({w,g})))))
+# needs pygments to be installed
+c = Code("""
+type MyJuliaType
+    a::Array{Int}
+end
+""")
+
+openpdf(report(
+    Section("Results", {
+        Section("Plots", Figure("Plot comparison",Tabular({w,g}))),
+        Section("Code", c)
+})))
 ```
 
 ![](example.png)
@@ -41,6 +55,7 @@ openpdf(report(Section("Plots",Figure("Plot comparison",Tabular({w,g})))))
 * `Figure(caption, content)`
 * `Table(caption content)`
 * `Tabular(content)`
+* `Code(content)`
 * `Image(height, width, Array or Winston.FramePlot or Gadfly.Plot)`, where the array can be either of size `(m,n,1)` or RGB `(m,n,3)`, with the values in the range `0..1`
 
 ## Todos
