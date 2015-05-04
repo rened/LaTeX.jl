@@ -76,10 +76,9 @@ end
 
 function openpdf(latex)
 dirname = "$(tempname()).d";
-println(dirname)
 mkdir(dirname)
-texname = "$dirname\\document.tex"
-pdfname = "$dirname\\document.pdf"
+texname = joinpath(dirname, "document.tex")
+pdfname = joinpath(dirname,"document.pdf")
 open(texname, "w") do file
 	write(file, latex)
 end
@@ -203,12 +202,10 @@ function report(p, items; author = "", title = "Report", date = "", toc = false,
     isempty(theabstract) ? "": "\\begin{abstract}$theabstract\\end{abstract}", 
     toc ? "\\tableofcontents" : ""}
 
-    #@show processitem(p, items, 1)
     append!(r, processitem(p, items, 1))
     push!(r, "\\end{document}")
 
     r = join(flatten(r), "\n")
-    #println(r)
     r
 end
 
