@@ -1,16 +1,10 @@
-language: cpp
-compiler:
-  - clang
+language: julia
+os:
+  - linux
+  - osx
+julia:
+  - release
+  - nightly
 notifications:
-  email: 
-      - github@donner.at
-before_install:
-  - sudo add-apt-repository ppa:staticfloat/julia-deps -y
-  - sudo add-apt-repository ppa:staticfloat/juliareleases -y
-  - sudo apt-get update -qq -y
-  - sudo apt-get install libpcre3-dev julia -y
-script:
-  - julia -e 'Pkg.init()' 
-  - julia -e 'run(`ln -s $(pwd()) $(Pkg.dir("LaTeX"))`); Pkg.pin("LaTeX")'
-  - julia -e 'Pkg.resolve()'
-  - julia ~/.julia/v0.3/LaTeX/test/runtests.jl
+  email:
+    - code@donner.at
