@@ -1,6 +1,6 @@
 module LaTeX
 
-using SHA
+using SHA, Compat
 import Images
 
 @windows_only include("wincall.jl")
@@ -103,7 +103,7 @@ function openpdf(latex)
     nothing
 end
 
-flatten(a) = flatten({},a)
+flatten(a) = flatten(Any[],a)
 function flatten(r, a)
     for x in a
         isa(x,Array) ? flatten(r,x) : push!(r,x)
@@ -111,34 +111,34 @@ function flatten(r, a)
     r
 end
 
-processitem{T<:String}(p, item::T, indent) = {item}
-processitem{T<:Number}(p, item::T, indent) = {"$item"}
+processitem{T<:String}(p, item::T, indent) = [item]
+processitem{T<:Number}(p, item::T, indent) = ["$item"]
 
 function processitem(p, items::Array, indent)
-    isempty(items) && return {""}
+    isempty(items) && return [""]
     map(x -> processitem(p, x, indent), items)
 end
 
 function processitem(p, item::Section, indent)
-    commands = {"chapter","section","subsection","subsubsection","paragraph"}
+    commands = ["chapter","section","subsection","subsubsection","paragraph"]
     if indent > p[:maxdepth]
         cmd = last(commands)
     else
         cmd = commands[indent]
     end
 
-    r = {"\\$cmd{$(item.title)}\\nopagebreak"}
+    r = Any["\\$cmd{$(item.title)}\\nopagebreak"]
     append!(r, processitem(p, item.content, indent+1))
 end
 
 function processitem(p, item::Figure, indent)
-    r = {"\\begin{figure}[!ht]"}
+    r = Any["\\begin{figure}[!ht]"]
     append!(r, processitem(p, item.content, indent))
-    append!(r, {"\\caption{$(item.caption)}", "\\end{figure}"})
+    append!(r, ["\\caption{$(item.caption)}", "\\end{figure}"])
 end
 
 function processitem(p, item::Code, indent)
-    {"\\begin{pygmented}{jl}", split(item.code,'\n')..., "\\end{pygmented}"}
+    ["\\begin{pygmented}{jl}", split(item.code,'\n')..., "\\end{pygmented}"]
 end
 
 function processitem(p, item::Image, indent)
@@ -147,7 +147,7 @@ function processitem(p, item::Image, indent)
         write(file, item.data.data)
     end
         
-    r = {"\\includegraphics["}
+    r = Any["\\includegraphics["]
     if !isempty(item.width)
         if item.width <= 1
             push!(r, "width=$(item.width)\\textwidth,")
@@ -168,9 +168,9 @@ function processitem(p, item::Image, indent)
 end
  
 function processitem(p, item::Table, indent)
-    r = {"\\begin{table}[!ht]"}
+    r = Any["\\begin{table}[!ht]"]
     push!(r, processitem(p, item.content, indent))
-    push!(r, {"\\caption{$(item.caption)}", "\\end{table}"})
+    push!(r, ["\\caption{$(item.caption)}", "\\end{table}"])
 end
     
 function processitem(p, item::Tabular, indent)
@@ -178,7 +178,7 @@ function processitem(p, item::Tabular, indent)
         item.content = reshape(item.content, (1, length(item.content)))
     end
     sm, sn = size(item.content)
-    r = {"\\begin{tabular}[!ht]{$(repeat("c", sn))}"}
+    r = Any["\\begin{tabular}[!ht]{$(repeat("c", sn))}"]
     for m = 1:sm
         for n = 1:sn
             push!(r, processitem(p, item.content[m,n], indent))
@@ -194,12 +194,12 @@ report(items; kargs...) = report(Dict(), items; kargs...)
 function report(p, items; author = "", title = "Report", date = "", toc = false,
     theabstract = "")
     
-    p = merge({:maxdepth => 3, :tmppath => tempdir()}, p)
+    p = merge((@compat Dict(:maxdepth => 3, :tmppath => tempdir())), p)
     
 
     mkpath(p[:tmppath])
 
-    r = {
+    r = Any[
     "\\documentclass[11pt,a4paper]{report}", 
     "\\usepackage[latin1]{inputenc}", 
     "\\usepackage{graphicx}", 
@@ -216,7 +216,7 @@ function report(p, items; author = "", title = "Report", date = "", toc = false,
     "\\usestyle{default}",
     "\\maketitle", 
     isempty(theabstract) ? "": "\\begin{abstract}$theabstract\\end{abstract}", 
-    toc ? "\\tableofcontents" : ""}
+    toc ? "\\tableofcontents" : ""]
 
     append!(r, processitem(p, items, 1))
     push!(r, "\\end{document}")
@@ -226,19 +226,19 @@ function report(p, items; author = "", title = "Report", date = "", toc = false,
 end
 
 
-#openpdf(report(Dict(),{}))
-#openpdf(report(Dict(),{"Test"}))
+#openpdf(report(Dict(),[]))
+#openpdf(report(Dict(),["Test"]))
 #openpdf(report(Section("Section header", "content"), toc = false))
 
 #sec1 = Section("sec1", "content1")
 #sec2 = Section("sec", "content1")
-#ch1 = Section("ch1", {sec1, sec2})
+#ch1 = Section("ch1", [sec1, sec2])
 
 #openpdf(report(ch1, toc=true))
 
 #openpdf(report(Figure("caption", "content")))
 #openpdf(report(Table("caption", "content")))
-#openpdf(report(Tabular({'1' '2'})))
+#openpdf(report(Tabular(['1' '2'])))
 
 
 end # module
