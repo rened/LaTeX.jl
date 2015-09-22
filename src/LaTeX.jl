@@ -1,8 +1,8 @@
-VERSION >= v"0.4.0-dev+6521" && __precompile__()
+# isdefined(:__precompile__) && __precompile__()
 
 module LaTeX
 
-using SHA, Compat
+using SHA
 import Images
 
 @windows_only include("wincall.jl")
@@ -29,7 +29,7 @@ type Figure
 end
 
 type ImageFileData
-    data::Array{Uint8}
+    data::Array{UInt8}
     typ::Symbol
 end
 
@@ -113,7 +113,7 @@ function flatten(r, a)
     r
 end
 
-processitem{T<:String}(p, item::T, indent) = [item]
+processitem{T<:AbstractString}(p, item::T, indent) = [item]
 processitem{T<:Number}(p, item::T, indent) = ["$item"]
 
 function processitem(p, items::Array, indent)
@@ -196,7 +196,7 @@ report(items; kargs...) = report(Dict(), items; kargs...)
 function report(p, items; author = "", title = "Report", date = "", toc = false,
     theabstract = "")
     
-    p = merge((@compat Dict(:maxdepth => 3, :tmppath => tempdir())), p)
+    p = merge((Dict(:maxdepth => 3, :tmppath => tempdir())), p)
     
 
     mkpath(p[:tmppath])

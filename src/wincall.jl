@@ -1,6 +1,6 @@
 typealias HANDLE Ptr{Void}
-typealias DWORD Uint32
-typealias WORD Uint16
+typealias DWORD UInt32
+typealias WORD UInt16
 typealias LPTSTR Cwchar_t
 typealias LPBYTE Ptr{Char}
 
@@ -39,7 +39,7 @@ si = [STARTUPINFO()]
 	pi = [PROCESS_INFORMATION()]
 	ccall(:CreateProcessW, Cchar,
 	(Ptr{Cwchar_t}, Ptr{Cwchar_t}, Ptr{Int}, Ptr{Int}, Cchar, Int64,
-	Ptr{Uint8}, Ptr{Uint8}, Ptr{PROCESS_INFORMATION}, Ptr{STARTUPINFO}),
+	Ptr{UInt8}, Ptr{UInt8}, Ptr{PROCESS_INFORMATION}, Ptr{STARTUPINFO}),
 	C_NULL,
 	utf16(cmd),
 	C_NULL,
