@@ -46,7 +46,7 @@ end
 Image(height, width, data::Array) = Image(height, width, size(data,3) == 3 ? Images.colorim(data) : Images.grayim(data'))
 function Image(height, width, image::Images.Image)
     filename = tempname()*".png"
-    Images.imwrite(image, filename)
+    Images.save(filename, image)
     r = readall(filename)
     rm(filename)
     Image(height, width, ImageFileData(r, :png))
@@ -82,7 +82,6 @@ end
 
 function openpdf(latex)
     dirname = "$(tempname()).d"
-    @show dirname
     mkdir(dirname)
     texname = joinpath(dirname, "document.tex")
     pdfname = joinpath(dirname,"document.pdf")
