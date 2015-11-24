@@ -3,11 +3,20 @@
 module LaTeX
 
 using SHA
+using Iterators
 import Images
 
 @windows_only include("wincall.jl")
 
-export Section, Table, Tabular, Figure, Image, ImageFileData, Code, report, openpdf
+export Section, Table, Tabular, Figure, Image, ImageFileData, Code, TOC,
+    Abstract, report, openpdf, document, DocumentClass, Title, Author, Date
+
+type TOC
+end
+
+type Abstract
+    content
+end
 
 type Section
     title
@@ -39,10 +48,6 @@ type Image
     data::ImageFileData
 end
 
-type Code
-    code
-end
-
 Image(height, width, data::Array) = Image(height, width, size(data,3) == 3 ? Images.colorim(data) : Images.grayim(data'))
 function Image(height, width, image::Images.Image)
     filename = tempname()*".png"
@@ -52,11 +57,45 @@ function Image(height, width, image::Images.Image)
     Image(height, width, ImageFileData(r, :png))
 end
 
+type Code
+    code
+end
+
+# declarations: non-displayed items controlling document metadata
+abstract AbstractDecl
+
+type DocumentClass <: AbstractDecl
+    class::AbstractString
+    settings::Vector{AbstractString}
+end
+
+type Author <: AbstractDecl
+    text::AbstractString
+end
+
+type Title <: AbstractDecl
+    text::AbstractString
+end
+
+# Declatations can also be dates
+Decl = Union{AbstractDecl, Date}
+
+function processdecl(d::DocumentClass)
+    if isempty(d.settings)
+        "\\documentclass{$(d.class)}"
+    else
+        "\\documentclass[$(join(d.settings, ','))]{$(d.class)}"
+    end
+end
+processdecl(a::Author) = "\\author{$(a.text)}"
+processdecl(t::Title) = "\\title{$(t.text)}"
+processdecl(d::Date) = "\\date{$d}"
+
 
 isinstalled(a) = isa(Pkg.installed(a), VersionNumber)
 if isinstalled("Winston")
-    import Winston 
-    Image(height, width, a::Winston.FramedPlot) = 
+    import Winston
+    Image(height, width, a::Winston.FramedPlot) =
         Image(height, width, ImageFileData(a))
     function ImageFileData(a::Winston.FramedPlot)
         filename = tempname()*".pdf"
@@ -68,8 +107,8 @@ if isinstalled("Winston")
 end
 
 if isinstalled("Gadfly")
-    import Gadfly 
-    Image(height, width, a::Gadfly.Plot) = 
+    import Gadfly
+    Image(height, width, a::Gadfly.Plot) =
     Image(height, width, ImageFileData(height, width, a))
     function ImageFileData(height, width, a::Gadfly.Plot)
         filename = tempname()*".pdf"
@@ -88,7 +127,7 @@ function openpdf(latex)
     open(texname, "w") do file
         write(file, latex)
     end
-    cd(dirname) do 
+    cd(dirname) do
         for i in 1:2
             output = readall(`pdflatex -shell-escape -halt-on-error $texname`)
             contains("Error:", output) && println(output)
@@ -114,18 +153,28 @@ end
 
 processitem{T<:AbstractString}(p, item::T, indent) = [item]
 processitem{T<:Number}(p, item::T, indent) = ["$item"]
+processitem(::Dict, ::Decl, ::Integer) = []
 
 function processitem(p, items::Array, indent)
     isempty(items) && return [""]
     map(x -> processitem(p, x, indent), items)
 end
 
+function processitem(p, item::TOC, indent)
+    ["\\tableofcontents"]
+end
+
+function processitem(p, item::Abstract, indent)
+    r = Any["\\begin{abstract}"]
+    append!(r, processitem(p, item.content, indent))
+    push!(r, "\\end{abstract}")
+end
+
 function processitem(p, item::Section, indent)
-    commands = ["chapter","section","subsection","subsubsection","paragraph"]
     if indent > p[:maxdepth]
-        cmd = last(commands)
+        cmd = last(p[:sectioncommands])
     else
-        cmd = commands[indent]
+        cmd = p[:sectioncommands][indent]
     end
 
     r = Any["\\$cmd{$(item.title)}\\nopagebreak"]
@@ -138,16 +187,18 @@ function processitem(p, item::Figure, indent)
     append!(r, ["\\caption{$(item.caption)}", "\\end{figure}"])
 end
 
-function processitem(p, item::Code, indent)
-    ["\\begin{pygmented}{jl}", split(item.code,'\n')..., "\\end{pygmented}"]
-end
+processitem(::Dict, item::Code, indent) = [
+    "\\usestyle{default}",
+    "\\begin{pygmented}{jl}",
+    split(item.code,'\n')...,
+    "\\end{pygmented}"]
 
 function processitem(p, item::Image, indent)
     filename = joinpath(tempdir(), sha256(item.data.data)*".$(item.data.typ)")
     open(filename, "w") do file
         write(file, item.data.data)
     end
-        
+
     r = Any["\\includegraphics["]
     if !isempty(item.width)
         if item.width <= 1
@@ -167,13 +218,13 @@ function processitem(p, item::Image, indent)
     push!(r, "]{$escaped_filename}")
     flatten(r)
 end
- 
+
 function processitem(p, item::Table, indent)
     r = Any["\\begin{table}[!ht]"]
     push!(r, processitem(p, item.content, indent))
     push!(r, ["\\caption{$(item.caption)}", "\\end{table}"])
 end
-    
+
 function processitem(p, item::Tabular, indent)
     if ndims(item.content) == 1
         item.content = reshape(item.content, (1, length(item.content)))
@@ -191,39 +242,130 @@ function processitem(p, item::Tabular, indent)
     end
     push!(r, "\\end{tabular}")
 end
-report(items; kargs...) = report(Dict(), items; kargs...)
-function report(p, items; author = "", title = "Report", date = "", toc = false,
-    theabstract = "")
-    
+
+# get required packages and settings for this element and all children
+getrequirements(item) = Dict()
+function getrequirements(items::Array)
+    base = Dict()
+    for i in items
+        requirements = getrequirements(i)
+        for (requirement, settings) in requirements
+            if haskey(base, requirement)
+                union!(base[requirement], settings)
+            else
+                base[requirement] = settings
+            end
+        end
+    end
+    base
+end
+getrequirements(::Code) = Dict("texments" => Set([]))
+getrequirements(::Image) = Dict("graphicx" => Set([]))
+getrequirements(a::Abstract) = getrequirements(a.content)
+getrequirements(s::Section) = getrequirements(Any[s.title, s.content])
+getrequirements(t::Table) = getrequirements(Any[t.caption, t.content])
+getrequirements(t::Tabular) = getrequirements(t.content)
+getrequirements(f::Figure) = getrequirements(Any[f.caption, f.content])
+
+# add information about document class in dictionary.
+function inform!(p, d::DocumentClass)
+    if d.class == "report"
+        p[:sectioncommands] = ["chapter", "section", "subsection",
+            "subsubsection","paragraph"]
+    else  # article & others
+        p[:sectioncommands] = ["section", "subsection", "subsubsection",
+            "paragraph"]
+    end
+end
+
+document(items) = document(Dict(), items)
+function document(p, items)
+    # make required path
     p = merge((Dict(:maxdepth => 3, :tmppath => tempdir())), p)
-    
 
     mkpath(p[:tmppath])
 
-    r = Any[
-    "\\documentclass[11pt,a4paper]{report}", 
-    "\\usepackage[latin1]{inputenc}", 
-    "\\usepackage{graphicx}", 
-    "\\usepackage[cm]{fullpage}", 
-    "\\usepackage{sectsty}", 
-    "\\usepackage{morefloats}", 
-    "\\usepackage[section]{placeins}", 
-    "\\usepackage{texments}",
-    "\\allsectionsfont{\\normalfont\\sffamily\\bfseries}", 
-    isempty(date) ? "" : "\\date{$date}", 
-    isempty(author) ? "": "\\author{$author}", 
-    "\\title{$title}", 
-    "\\begin{document}", 
-    "\\usestyle{default}",
-    "\\maketitle", 
-    isempty(theabstract) ? "": "\\begin{abstract}$theabstract\\end{abstract}", 
-    toc ? "\\tableofcontents" : ""]
+    # document properties
+    dclass = nothing
+    author = nothing
+    title = nothing
+    date = nothing
 
-    append!(r, processitem(p, items, 1))
+    # parse items tree for declarations (currently to depth 1)
+    for tr in items
+        if isa(tr, DocumentClass)
+            dclass = tr
+        elseif isa(tr, Author)
+            author = tr
+        elseif isa(tr, Title)
+            title = tr
+        elseif isa(tr, Date)
+            date = tr
+        end
+    end
+
+    # modify preamble dict to reflect docclass, e.g. section headers
+    inform!(p, dclass)
+
+    # global required packages (keep small)
+    require = Dict(
+        "inputenc" => Set(["latin1"]),
+        "fullpage" => Set(["cm"]),
+        "sectsty" => Set([]),
+        "morefloats" => Set([]),
+        "placeins" => Set(["section"]))
+
+    # add required packages (dynamic based off items)
+    docrequire = getrequirements(items)
+
+    preamble = AbstractString[]
+    docbody = processitem(p, items, 1)
+
+    # build up the document starting from the beginning
+    push!(preamble, processdecl(dclass))
+    for (package, settings) in chain(require, docrequire)
+        if isempty(settings)
+            push!(preamble, "\\usepackage{$package}")
+        else
+            push!(preamble, "\\usepackage[$(join(settings, ','))]{$package}")
+        end
+    end
+
+    # some other default stuff
+    append!(preamble, [
+        "\\allsectionsfont{\\normalfont\\sffamily\\bfseries}",
+        isa(date, Date) ? processdecl(date) : "",
+        isa(author, Author) ? processdecl(author) : "",
+        isa(title, Title) ? processdecl(title) : "",
+        "\\begin{document}",  # technically not preamble anymore
+        "\\maketitle"])
+
+    # append the document
+    r = vcat(preamble, docbody)
     push!(r, "\\end{document}")
 
     r = join(flatten(r), "\n")
     r
+end
+
+report(items; kargs...) = report(Dict(), items; kargs...)
+function report(p, items; author = "", title = "Report", date = "", toc = false,
+    theabstract = "")
+
+    doctree = Any[DocumentClass("report", ["11pt", "a4paper"])]
+    # make date, author, etc. if available
+    isempty(date) || push!(doctree, Date(date))
+    isempty(author) || push!(doctree, Author(author))
+    push!(doctree, Title(title))
+    isempty(theabstract) || push!(doctree, Abstract(theabstract))
+    toc && push!(doctree, TOC())
+
+    if isa(items, Vector)
+        append!(doctree, items)
+    else
+        push!(doctree, items)
+    end
+    document(p, doctree)
 end
 
 
