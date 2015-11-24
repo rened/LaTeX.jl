@@ -3,7 +3,6 @@
 module LaTeX
 
 using SHA
-using Iterators
 import Images
 
 @windows_only include("wincall.jl")
@@ -323,7 +322,7 @@ function document(p, items)
 
     # build up the document starting from the beginning
     push!(preamble, processdecl(dclass))
-    for (package, settings) in chain(require, docrequire)
+    for (package, settings) in merge(require, docrequire)
         if isempty(settings)
             push!(preamble, "\\usepackage{$package}")
         else
