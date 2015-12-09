@@ -8,7 +8,7 @@ import Images
 @windows_only include("wincall.jl")
 
 export Section, Table, Tabular, Figure, Image, ImageFileData, Code, TOC,
-    Abstract, report, openpdf, document, DocumentClass, Title, Author, Date
+    Abstract, report, openpdf, document, DocumentClass, Title, Author
 
 type TOC
 end
@@ -76,8 +76,13 @@ type Title <: AbstractDecl
     text::AbstractString
 end
 
-# Declatations can also be dates
-Decl = Union{AbstractDecl, Date}
+type Style <: AbstractDecl
+    section::AbstractString
+end
+
+isdecl(::AbstractDecl) = true
+isdecl(::Date) = true
+isdecl(_) = false
 
 function processdecl(d::DocumentClass)
     if isempty(d.settings)
@@ -89,6 +94,7 @@ end
 processdecl(a::Author) = "\\author{$(a.text)}"
 processdecl(t::Title) = "\\title{$(t.text)}"
 processdecl(d::Date) = "\\date{$d}"
+processdecl(s::Style) = "\\allsectionsfont{$(s.section)}"
 
 
 isinstalled(a) = isa(Pkg.installed(a), VersionNumber)
@@ -152,7 +158,7 @@ end
 
 processitem{T<:AbstractString}(p, item::T, indent) = [item]
 processitem{T<:Number}(p, item::T, indent) = ["$item"]
-processitem(::Dict, ::Decl, ::Integer) = []
+processitem(p, decl, indent) = []
 
 function processitem(p, items::Array, indent)
     isempty(items) && return [""]
@@ -186,10 +192,10 @@ function processitem(p, item::Figure, indent)
     append!(r, ["\\caption{$(item.caption)}", "\\end{figure}"])
 end
 
-processitem(::Dict, item::Code, indent) = [
+processitem(p, item::Code, indent) = [
     "\\usestyle{default}",
     "\\begin{pygmented}{jl}",
-    split(item.code,'\n')...,
+    split(item.code, '\n')...,
     "\\end{pygmented}"]
 
 function processitem(p, item::Image, indent)
@@ -266,6 +272,8 @@ getrequirements(t::Table) = getrequirements(Any[t.caption, t.content])
 getrequirements(t::Tabular) = getrequirements(t.content)
 getrequirements(f::Figure) = getrequirements(Any[f.caption, f.content])
 
+getrequirements(d::Style) = Dict("sectsty" => Set([]))
+
 # add information about document class in dictionary.
 function inform!(p, d::DocumentClass)
     if d.class == "report"
@@ -286,20 +294,14 @@ function document(p, items)
 
     # document properties
     dclass = nothing
-    author = nothing
-    title = nothing
-    date = nothing
+    decls = Dict()
 
     # parse items tree for declarations (currently to depth 1)
     for tr in items
         if isa(tr, DocumentClass)
             dclass = tr
-        elseif isa(tr, Author)
-            author = tr
-        elseif isa(tr, Title)
-            title = tr
-        elseif isa(tr, Date)
-            date = tr
+        elseif isdecl(tr)
+            decls[typeof(tr)] = tr
         end
     end
 
@@ -310,7 +312,6 @@ function document(p, items)
     require = Dict(
         "inputenc" => Set(["latin1"]),
         "fullpage" => Set(["cm"]),
-        "sectsty" => Set([]),
         "morefloats" => Set([]),
         "placeins" => Set(["section"]))
 
@@ -332,10 +333,7 @@ function document(p, items)
 
     # some other default stuff
     append!(preamble, [
-        "\\allsectionsfont{\\normalfont\\sffamily\\bfseries}",
-        isa(date, Date) ? processdecl(date) : "",
-        isa(author, Author) ? processdecl(author) : "",
-        isa(title, Title) ? processdecl(title) : "",
+        [processdecl(dl) for dl in values(decls)]...,
         "\\begin{document}",  # technically not preamble anymore
         "\\maketitle"])
 
@@ -358,6 +356,9 @@ function report(p, items; author = "", title = "Report", date = "", toc = false,
     push!(doctree, Title(title))
     isempty(theabstract) || push!(doctree, Abstract(theabstract))
     toc && push!(doctree, TOC())
+
+    # default styling
+    push!(doctree, Style("\\normalfont\\sffamily\\bfseries"))
 
     if isa(items, Vector)
         append!(doctree, items)
