@@ -124,6 +124,19 @@ if isinstalled("Gadfly")
     end
 end
 
+if isinstalled("Plots")
+    import Plots
+    Image{T<:Union{Plots.Plot,Plots.Subplot}}(height, width, a::T) =
+        Image(height, width, ImageFileData(height, width, a))
+    function ImageFileData{T<:Union{Plots.Plot,Plots.Subplot}}(height, width, a::T)
+        filename = tempname()*".pdf"
+        Plots.pdf(a, filename)
+        r = readall(filename)
+        rm(filename)
+        ImageFileData(r, :pdf)
+    end
+end
+
 function openpdf(latex)
     dirname = "$(tempname()).d"
     mkdir(dirname)
