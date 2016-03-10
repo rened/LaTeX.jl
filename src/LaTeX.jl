@@ -316,9 +316,14 @@ function inform!(p, d::DocumentClass)
     end
 end
 
-document(items; custom_require::Dict = Dict()) = document(Dict(), items,
-                                                          custom_require = custom_require)
-function document(p, items; custom_require::Dict = Dict())
+document(items;
+         custom_require::Dict = Dict(),
+         custom_preamble::Array = []) = document(Dict(), items,
+                                                 custom_require = custom_require,
+                                                 custom_preamble = custom_preamble)
+function document(p, items;
+                  custom_require::Dict = Dict(),
+                  custom_preamble::Array = [])
     # make required path
     p = merge((Dict(:maxdepth => 3, :tmppath => tempdir())), p)
 
@@ -361,6 +366,10 @@ function document(p, items; custom_require::Dict = Dict())
         else
             push!(preamble, "\\usepackage[$(join(settings, ','))]{$package}")
         end
+    end
+
+    for pa in custom_preamble
+        push!(preamble, pa)
     end
 
     # some other default stuff
