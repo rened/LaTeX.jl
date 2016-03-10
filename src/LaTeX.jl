@@ -30,7 +30,14 @@ end
 
 type Tabular
     content::Array
+    alignment::AbstractString
 end
+function Tabular(content::Array, alignment::Char)
+    sn = size(content,2)
+    Tabular(content, repeat("$alignment", sn))
+end
+Tabular(content::Array) = Tabular(content, 'c')
+
 
 type Figure
     caption
@@ -259,7 +266,7 @@ function processitem(p, item::Tabular, indent)
         item.content = reshape(item.content, (1, length(item.content)))
     end
     sm, sn = size(item.content)
-    r = Any["\\begin{tabular}[!ht]{$(repeat("c", sn))}"]
+    r = Any["\\begin{tabular}[!ht]{$(item.alignment)}"]
     for m = 1:sm
         for n = 1:sn
             push!(r, processitem(p, item.content[m,n], indent))
