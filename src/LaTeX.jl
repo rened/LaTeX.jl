@@ -341,11 +341,11 @@ function document(p, items; custom_require::Dict = Dict())
     inform!(p, dclass)
 
     # global required packages (keep small)
-    require = Dict(
-        "inputenc" => Set(["latin1"]),
-        "fullpage" => Set(["cm"]),
-        "morefloats" => Set([]),
-        "placeins" => Set(["section"]))
+    require = length(custom_require) == 0 ? Dict("inputenc" => Set(["latin1"]),
+                                                 "fullpage" => Set(["cm"]),
+                                                 "morefloats" => Set([]),
+                                                 "placeins" => Set(["section"])) :
+                                                     custom_require
 
     # add required packages (dynamic based off items)
     docrequire = getrequirements(items)
@@ -355,7 +355,7 @@ function document(p, items; custom_require::Dict = Dict())
 
     # build up the document starting from the beginning
     push!(preamble, processdecl(dclass))
-    for (package, settings) in merge(require, docrequire, custom_require)
+    for (package, settings) in merge(require, docrequire)
         if isempty(settings)
             push!(preamble, "\\usepackage{$package}")
         else
