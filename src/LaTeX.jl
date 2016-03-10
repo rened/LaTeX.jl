@@ -8,7 +8,8 @@ import Images
 @windows_only include("wincall.jl")
 
 export Section, Table, Tabular, Figure, Image, ImageFileData, Code, TOC,
-    Abstract, report, openpdf, document, DocumentClass, Title, Author
+    Abstract, report, openpdf, document, DocumentClass, Title, Author,
+    Block
 
 type TOC
 end
@@ -78,6 +79,11 @@ end
 
 type Style <: AbstractDecl
     section::AbstractString
+end
+
+type Block
+    environment::AbstractString
+    items
 end
 
 isdecl(::AbstractDecl) = true
@@ -182,11 +188,16 @@ function processitem(p, item::TOC, indent)
     ["\\tableofcontents"]
 end
 
-function processitem(p, item::Abstract, indent)
-    r = Any["\\begin{abstract}"]
-    append!(r, processitem(p, item.content, indent))
-    push!(r, "\\end{abstract}")
+function processitem(p, item::Block, indent; options = [])
+    env = item.environment
+    options = (length(options) > 0) ? "[$(join(options,','))]" : ""
+    r = Any["\\begin{$env}$options"]
+    append!(r, processitem(p, item.items, indent+1))
+    push!(r, "\\end{$env}")
 end
+
+processitem(p, item::Abstract, indent) =
+    processitem(p, Block("abstract", item.content), indent)
 
 function processitem(p, item::Section, indent)
     if indent > p[:maxdepth]
