@@ -298,8 +298,9 @@ function inform!(p, d::DocumentClass)
     end
 end
 
-document(items) = document(Dict(), items)
-function document(p, items)
+document(items; custom_require::Dict = Dict()) = document(Dict(), items,
+                                                          custom_require = custom_require)
+function document(p, items; custom_require::Dict = Dict())
     # make required path
     p = merge((Dict(:maxdepth => 3, :tmppath => tempdir())), p)
 
@@ -336,7 +337,7 @@ function document(p, items)
 
     # build up the document starting from the beginning
     push!(preamble, processdecl(dclass))
-    for (package, settings) in merge(require, docrequire)
+    for (package, settings) in merge(require, docrequire, custom_require)
         if isempty(settings)
             push!(preamble, "\\usepackage{$package}")
         else
