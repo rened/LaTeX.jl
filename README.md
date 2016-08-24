@@ -1,6 +1,9 @@
 # LaTeX
 
-[![Build Status](https://travis-ci.org/rened/LaTeX.jl.svg?branch=master)](https://travis-ci.org/rened/LaTeX.jl)
+[![Build Status](https://travis-ci.org/rened/LaTeX.jl.png)](https://travis-ci.org/rened/LaTeX.jl)
+[![Build Status](http://pkg.julialang.org/badges/LaTeX_0.4.svg)](http://pkg.julialang.org/?pkg=LaTeX&ver=0.4)
+[![Build Status](http://pkg.julialang.org/badges/LaTeX_0.5.svg)](http://pkg.julialang.org/?pkg=LaTeX&ver=0.5)
+
 
 This package allows to construct LaTeX documents programmatically.
 

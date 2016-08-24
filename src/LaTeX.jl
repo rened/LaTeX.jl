@@ -1,11 +1,11 @@
-# isdefined(:__precompile__) && __precompile__()
+__precompile__(false)  # as precompiling Winston does not work
 
 module LaTeX
 
-using SHA
+using SHA, Compat
 import Images
 
-@windows_only include("wincall.jl")
+@static if is_windows() include("wincall.jl") end
 
 export Section, Table, Tabular, Figure, Image, ImageFileData, Code, TOC,
     Abstract, report, openpdf, document, DocumentClass, Title, Author
@@ -212,7 +212,7 @@ processitem(p, item::Code, indent) = [
     "\\end{pygmented}"]
 
 function processitem(p, item::Image, indent)
-    filename = joinpath(tempdir(), sha256(item.data.data)*".$(item.data.typ)")
+    filename = joinpath(tempdir(), bytes2hex(sha256(item.data.data))*".$(item.data.typ)")
     open(filename, "w") do file
         write(file, item.data.data)
     end

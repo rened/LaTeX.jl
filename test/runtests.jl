@@ -1,3 +1,5 @@
+println("\n\n\nRunning tests ...")
+
 using LaTeX
 import LaTeX: getrequirements
 using Base.Test
@@ -24,3 +26,6 @@ doc = document([
 rep = report(Section("Test", "Lorum ipsum."))
 @test split(rep, '\n')[1] == "\\documentclass[11pt,a4paper]{report}"
 @test contains(rep, "\\chapter")  # reports have chapter as top-level
+
+println("   ... done running tests!")
+
