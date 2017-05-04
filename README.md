@@ -40,10 +40,10 @@ end
 """)
 
 openpdf(report(
-    Section("Results", {
-        Section("Plots", Figure("Plot comparison",Tabular({w,g}))),
+    Section("Results", [
+        Section("Plots", Figure("Plot comparison",Tabular([w,g]))),
         Section("Code", c)
-})))
+])))
 ```
 
 ![](example.png)
