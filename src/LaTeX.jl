@@ -1,82 +1,80 @@
-__precompile__(false)  # as precompiling Winston does not work
-
 module LaTeX
 
-using SHA, Compat
+using SHA, Compat, Pkg, Dates, Requires
 import Images
 
-@static if is_windows() include("wincall.jl") end
+Sys.iswindows() && include("wincall.jl") 
 
 export Section, Table, Tabular, Figure, Image, ImageFileData, Code, TOC,
-    Abstract, report, openpdf, document, DocumentClass, Title, Author
+    Abstract, report, makepdf, writepdf, openpdf, document, DocumentClass, Title, Author
 
-type TOC
+mutable struct TOC
 end
 
-type Abstract
+mutable struct Abstract
     content
 end
 
-type Section
+mutable struct Section
     title
     content
 end
 
-type Table
+mutable struct Table
     caption
     content
 end
 
-type Tabular
+mutable struct Tabular
     content::Array
 end
 
-type Figure
+mutable struct Figure
     caption
     content
 end
 
-type ImageFileData
+mutable struct ImageFileData
     data::Array{UInt8}
     typ::Symbol
 end
 
-type Image
+mutable struct Image
     height
     width
     data::ImageFileData
 end
 
 Image(height, width, data::Array) = Image(height, width, size(data,3) == 3 ? Images.colorim(data) : Images.grayim(data'))
-function Image(height, width, image::Images.Image)
+function Image(height, width, image)
     filename = tempname()*".png"
     Images.save(filename, image)
-    r = readall(filename)
+    r = read(filename)
     rm(filename)
     Image(height, width, ImageFileData(r, :png))
 end
 
-type Code
+mutable struct Code
     code
 end
 
 # declarations: non-displayed items controlling document metadata
-abstract AbstractDecl
+abstract type AbstractDecl end 
 
-type DocumentClass <: AbstractDecl
+mutable struct DocumentClass <: AbstractDecl
     class::AbstractString
     settings::Vector{AbstractString}
 end
 
-type Author <: AbstractDecl
+mutable struct Author <: AbstractDecl
     text::AbstractString
 end
 
-type Title <: AbstractDecl
+mutable struct Title <: AbstractDecl
     text::AbstractString
 end
 
-type Style <: AbstractDecl
+mutable struct Style <: AbstractDecl
     section::AbstractString
 end
 
@@ -96,69 +94,54 @@ processdecl(t::Title) = "\\title{$(t.text)}"
 processdecl(d::Date) = "\\date{$d}"
 processdecl(s::Style) = "\\allsectionsfont{$(s.section)}"
 
+""" 
+    makepdf(latex) 
 
-isinstalled(a) = isa(Pkg.installed(a), VersionNumber)
-if isinstalled("Winston")
-    import Winston
-    Image(height, width, a::Winston.FramedPlot) =
-        Image(height, width, ImageFileData(a))
-    function ImageFileData(a::Winston.FramedPlot)
-        filename = tempname()*".pdf"
-        Winston.savefig(a, filename)
-        r = readall(filename)
-        rm(filename)
-        ImageFileData(r, :pdf)
-    end
-end
-
-if isinstalled("Gadfly")
-    import Gadfly
-    Image(height, width, a::Gadfly.Plot) =
-    Image(height, width, ImageFileData(height, width, a))
-    function ImageFileData(height, width, a::Gadfly.Plot)
-        filename = tempname()*".pdf"
-        Gadfly.draw(Gadfly.PDF(filename, width*Gadfly.cm, height*Gadfly.cm), a)
-        r = readall(filename)
-        rm(filename)
-        ImageFileData(r, :pdf)
-    end
-end
-
-if isinstalled("Plots")
-    import Plots
-    Image{T<:Union{Plots.Plot,Plots.Subplot}}(height, width, a::T) =
-        Image(height, width, ImageFileData(height, width, a))
-    function ImageFileData{T<:Union{Plots.Plot,Plots.Subplot}}(height, width, a::T)
-        filename = tempname()*".pdf"
-        Plots.pdf(a, filename)
-        r = readall(filename)
-        rm(filename)
-        ImageFileData(r, :pdf)
-    end
-end
-
-function openpdf(latex)
+Build pdf document in temporary directory using pdflatex and returns
+its path.
+"""
+function makepdf(latex)
     dirname = "$(tempname()).d"
     mkdir(dirname)
     texname = joinpath(dirname, "document.tex")
-    pdfname = joinpath(dirname,"document.pdf")
+    pdfname = joinpath(dirname, "document.pdf")
     open(texname, "w") do file
         write(file, latex)
     end
     cd(dirname) do
         for i in 1:2
-            output = readall(`pdflatex -shell-escape -halt-on-error $texname`)
-            contains("Error:", output) && println(output)
+            output = read(`pdflatex -shell-escape -halt-on-error $texname`,String)
+            occursin("Error:", output) && println(output)
         end
     end
+    pdfname
+end
 
-    if OS_NAME == :Windows
-        command = "cmd /K start \"\" $pdfname"
-        CreateProcess(command)
-    else
-        spawn(`open $pdfname`)
-    end
+""" 
+    writepdf(latex, filename)
+
+Build pdf document and copy it to `filename`.
+"""
+function writepdf(latex, filename)
+    pdfname = makepdf(latex)
+    cp(pdfname,filename,remove_destination=false)
     nothing
+end
+
+""" 
+    openpdf(latex)
+
+Build pdf document and open it.
+"""
+function openpdf(latex)
+    pdfname = makepdf(latex)
+    if Sys.iswindows()
+        command = `cmd /K start \"\" $pdfname`
+        run(command)
+    else
+        run(`open $pdfname`)
+    end
+    pdfname
 end
 
 flatten(a) = flatten(Any[],a)
@@ -169,8 +152,8 @@ function flatten(r, a)
     r
 end
 
-processitem{T<:AbstractString}(p, item::T, indent) = [item]
-processitem{T<:Number}(p, item::T, indent) = ["$item"]
+processitem(p, item::T, indent) where {T<:AbstractString} = [item]
+processitem(p, item::T, indent) where {T<:Number} = ["$item"]
 processitem(p, decl, indent) = []
 
 function processitem(p, items::Array, indent)
@@ -232,7 +215,7 @@ function processitem(p, item::Image, indent)
             push!(r, "height=$(item.height)cm")
         end
     end
-	escaped_filename = replace(filename,"\\","/")
+	escaped_filename = replace(filename,"\\" => "/")
     push!(r, "]{$escaped_filename}")
     flatten(r)
 end
@@ -381,6 +364,11 @@ function report(p, items; author = "", title = "Report", date = "", toc = false,
     document(p, doctree)
 end
 
+function __init__()
+    @require Winston = "bd07be1c-e76f-5ff0-9c0b-f51ef45303c6" include("winston.jl")
+    @require Gadfly = "c91e804a-d5a3-530f-b6f0-dfbca275c004" include("gadfly.jl")
+    @require Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80" include("plots.jl")
+end
 
 #openpdf(report(Dict(),[]))
 #openpdf(report(Dict(),["Test"]))

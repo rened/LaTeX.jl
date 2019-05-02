@@ -12,7 +12,7 @@ This package allows to construct LaTeX documents programmatically.
 It is assumed that you have `pdflatex` installed. You can then install `LaTeX.jl` like this:
 
 ```jl
-Pkg.add("LaTeX")
+]add LaTeX
 ```
 
 To be able to use code blocks with syntax highlighting, please install [Pygments](http://pygments.org/): `easy_install -U Pygments`.
@@ -23,27 +23,24 @@ To be able to use code blocks with syntax highlighting, please install [Pygments
 ```jl
 using LaTeX
 
-x = linspace(-6,6,100)
-y = sin(x)./x
+x = range(-6,6; length=100)
 
-import Winston
-w = Image([], 7, Winston.plot(x, y))
-
-import Gadfly
-g = Image(7, 7, Gadfly.plot(x = x, y = y))
+using Gadfly
+g = Image(7, 7, plot(x = x, y = sin.(x) ./ x, Geom.line))
+w = Image(7, 7, plot(x = x, y = cos.(x)))
 
 # needs pygments to be installed
 c = Code("""
-type MyJuliaType
+struct MyJuliaType
     a::Array{Int}
 end
 """)
 
 openpdf(report(
-    Section("Results", {
-        Section("Plots", Figure("Plot comparison",Tabular({w,g}))),
+    Section("Results", [
+        Section("Plots", Figure("Plot comparison",Tabular([w,g]))),
         Section("Code", c)
-})))
+])))
 ```
 
 ![](example.png)
@@ -56,6 +53,7 @@ openpdf(report(
 * `latex = document(content)` gives more control over the look and feel of
 the document. See [here](#Advanced) for more.
 * `openpdf(latex)` compiles the LaTeX file and tries to open it
+* `writepdf(latex, filename)` compiles the LaTeX file and save it to the destination provided
 * `Section(title, content)` creates a new section. A section is automatically translated to a Linux chapter, section or subsection according to its nesting
 * `Figure(caption, content)`
 * `Table(caption content)`

@@ -3,8 +3,16 @@ os:
   - linux
   - osx
 julia:
-  - 0.4
-  - 0.5
+  - 1.0
+  - nightly
+matrix:
+  allow_failures:
+  - julia: nightly
 notifications:
-  email:
-    - code@donner.at
+  email: false
+
+after_success:
+  - julia -e 'cd(Pkg.dir("LaTeX"));
+              Pkg.add("Coverage");
+              using Coverage;
+              Coveralls.submit(Coveralls.process_folder())'
