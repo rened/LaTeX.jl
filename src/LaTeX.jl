@@ -3,7 +3,7 @@ module LaTeX
 using SHA, Compat, Pkg, Dates, Requires
 import Images
 
-Sys.iswindows() && include("wincall.jl") 
+Sys.iswindows() && include("wincall.jl")
 
 export Section, Table, Tabular, Figure, Image, ImageFileData, Code, TOC,
     Abstract, report, makepdf, writepdf, openpdf, document, DocumentClass, Title, Author
@@ -59,7 +59,7 @@ mutable struct Code
 end
 
 # declarations: non-displayed items controlling document metadata
-abstract type AbstractDecl end 
+abstract type AbstractDecl end
 
 mutable struct DocumentClass <: AbstractDecl
     class::AbstractString
@@ -94,8 +94,8 @@ processdecl(t::Title) = "\\title{$(t.text)}"
 processdecl(d::Date) = "\\date{$d}"
 processdecl(s::Style) = "\\allsectionsfont{$(s.section)}"
 
-""" 
-    makepdf(latex) 
+"""
+    makepdf(latex)
 
 Build pdf document in temporary directory using pdflatex and returns
 its path.
@@ -117,18 +117,18 @@ function makepdf(latex)
     pdfname
 end
 
-""" 
+"""
     writepdf(latex, filename)
 
 Build pdf document and copy it to `filename`.
 """
 function writepdf(latex, filename)
     pdfname = makepdf(latex)
-    cp(pdfname,filename,remove_destination=false)
+    cp(pdfname,filename,force=true)
     nothing
 end
 
-""" 
+"""
     openpdf(latex)
 
 Build pdf document and open it.
