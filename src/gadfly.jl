@@ -1,5 +1,5 @@
 import .Gadfly
-import Cairo, Fontconfig
+#import Cairo, Fontconfig
 
 Image(height, width, a::Union{Gadfly.Plot, Gadfly.Compose.Context}) =
     Image(height, width, ImageFileData(height, width, a))
@@ -11,4 +11,3 @@ function ImageFileData(height, width, a::Union{Gadfly.Plot, Gadfly.Compose.Conte
     rm(filename)
     ImageFileData(r, :pdf)
 end
-

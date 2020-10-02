@@ -1,6 +1,6 @@
 module LaTeX
 
-using SHA, Compat, Pkg, Dates, Requires
+using SHA, Pkg, Dates, Requires
 import Images
 
 Sys.iswindows() && include("wincall.jl")
@@ -43,16 +43,20 @@ mutable struct Image
     height
     width
     data::ImageFileData
+
+    Image(height, width, data::ImageFileData) = new(height, width, data)
 end
 
 Image(height, width, data::Array) = Image(height, width, size(data,3) == 3 ? Images.colorim(data) : Images.grayim(data'))
+
 function Image(height, width, image)
     filename = tempname()*".png"
     Images.save(filename, image)
     r = read(filename)
     rm(filename)
-    Image(height, width, ImageFileData(r, :png))
+    new(height, width, ImageFileData(r, :png))
 end
+
 
 mutable struct Code
     code
