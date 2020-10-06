@@ -104,7 +104,7 @@ processdecl(s::Style) = "\\allsectionsfont{$(s.section)}"
 Build pdf document in temporary directory using pdflatex and returns
 its path.
 """
-function makepdf(latex; pdflatex = "pdflatex")
+function makepdf(latex, pdflatex = "pdflatex")
     dirname = "$(tempname()).d"
     mkdir(dirname)
     texname = joinpath(dirname, "document.tex")
@@ -126,9 +126,9 @@ end
 
 Build pdf document and copy it to `filename`.
 """
-function writepdf(latex, filename)
-    pdfname = makepdf(latex)
-    cp(pdfname,filename,force=true)
+function writepdf(latex, filename; pdflatex = "pdflatex")
+    pdfname = makepdf(latex, pdflatex)
+    cp(pdfname, filename, force=true)
     nothing
 end
 
