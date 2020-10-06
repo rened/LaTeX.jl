@@ -104,7 +104,7 @@ processdecl(s::Style) = "\\allsectionsfont{$(s.section)}"
 Build pdf document in temporary directory using pdflatex and returns
 its path.
 """
-function makepdf(latex)
+function makepdf(latex; pdflatex = "pdflatex")
     dirname = "$(tempname()).d"
     mkdir(dirname)
     texname = joinpath(dirname, "document.tex")
@@ -114,7 +114,7 @@ function makepdf(latex)
     end
     cd(dirname) do
         for i in 1:2
-            output = read(`pdflatex -shell-escape -halt-on-error $texname`,String)
+            output = read(`$pdflatex -shell-escape -halt-on-error $texname`,String)
             occursin("Error:", output) && println(output)
         end
     end
