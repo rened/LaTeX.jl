@@ -1,9 +1,9 @@
 module LaTeX
 
-using SHA, Compat, Pkg, Dates, Requires
+using SHA, Pkg, Dates, Requires
 import Images
 
-Sys.iswindows() && include("wincall.jl") 
+Sys.iswindows() && include("wincall.jl")
 
 export Section, Table, Tabular, Figure, Image, ImageFileData, Code, TOC,
     Abstract, report, makepdf, writepdf, openpdf, document, DocumentClass, Title, Author
@@ -43,23 +43,27 @@ mutable struct Image
     height
     width
     data::ImageFileData
+
+    Image(height, width, data::ImageFileData) = new(height, width, data)
 end
 
 Image(height, width, data::Array) = Image(height, width, size(data,3) == 3 ? Images.colorim(data) : Images.grayim(data'))
+
 function Image(height, width, image)
     filename = tempname()*".png"
     Images.save(filename, image)
     r = read(filename)
     rm(filename)
-    Image(height, width, ImageFileData(r, :png))
+    new(height, width, ImageFileData(r, :png))
 end
+
 
 mutable struct Code
     code
 end
 
 # declarations: non-displayed items controlling document metadata
-abstract type AbstractDecl end 
+abstract type AbstractDecl end
 
 mutable struct DocumentClass <: AbstractDecl
     class::AbstractString
@@ -94,13 +98,13 @@ processdecl(t::Title) = "\\title{$(t.text)}"
 processdecl(d::Date) = "\\date{$d}"
 processdecl(s::Style) = "\\allsectionsfont{$(s.section)}"
 
-""" 
-    makepdf(latex) 
+"""
+    makepdf(latex)
 
 Build pdf document in temporary directory using pdflatex and returns
 its path.
 """
-function makepdf(latex)
+function makepdf(latex, pdflatex = "pdflatex")
     dirname = "$(tempname()).d"
     mkdir(dirname)
     texname = joinpath(dirname, "document.tex")
@@ -110,25 +114,25 @@ function makepdf(latex)
     end
     cd(dirname) do
         for i in 1:2
-            output = read(`pdflatex -shell-escape -halt-on-error $texname`,String)
+            output = read(`$pdflatex -shell-escape -halt-on-error $texname`,String)
             occursin("Error:", output) && println(output)
         end
     end
     pdfname
 end
 
-""" 
+"""
     writepdf(latex, filename)
 
 Build pdf document and copy it to `filename`.
 """
-function writepdf(latex, filename)
-    pdfname = makepdf(latex)
-    cp(pdfname,filename,remove_destination=false)
+function writepdf(latex, filename; pdflatex = "pdflatex")
+    pdfname = makepdf(latex, pdflatex)
+    cp(pdfname, filename, force=true)
     nothing
 end
 
-""" 
+"""
     openpdf(latex)
 
 Build pdf document and open it.
